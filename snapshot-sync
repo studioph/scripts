@@ -13,26 +13,25 @@ export LOGDIR="$BACKUP_DIR/logs"
 export LOGFILE="$LOGDIR/$(date +%d-%m-%y_%H-%M-%S).log"
 export RSYNC_PASSWORD=$(cat $HOME/.rsync.pwd)
 
-# check if external drive is mounted
-#test -d "$backup_dir" || echo "Backup drive not connected" >> $logfile && exit 1
-
-# check if connected via ethernet
-test $(cat /sys/class/net/enx3448edab8c1b/operstate) = up || (echo "Not connected to ethernet" >> "$logfile" && exit 1)
-# check if NAS exists on LAN
-ping -c 4 10.0.1.9 || (echo "Cannot connect to NAS" >> "$logfile" && exit 1)
-
-# wait to sync if timeshift is running and creating a snapshot
-if pgrep timeshift || pgrep backintime
-then
-	echo "Waiting for snapshot creation to finish..." >> "$logfile"
-	sleep 5m
+if [[ $1 === 'timeshift' ]]; then
+    export REMOTE_DIR='system/linux'
+else
+    export REMOTE_DIR='files/linux'
 fi
 
+# Check if NAS exists on LAN
+ping -c 4 10.0.10.2 || (echo "Cannot connect to NAS" >> "$LOGFILE" && exit 1)
+
+# Wait to sync if timeshift is running and creating a snapshot
+while pgrep timeshift; do
+	echo "Waiting for snapshot creation to finish..." >> "$LOGFILE"
+	sleep 1m
+done
+
 function sync(){
-    echo "Syncing $1 snapshots..." >> "$logfile"
-    rsync -az --no-perms --info=progress2 --delete "$backup_dir/$1" rsync@10.0.1.9::backups/xps/linux
-    printf "%s\n\n" 'Done' >> "$logfile"
+    echo "Syncing $1 snapshots..." >> "$LOGFILE"
+    rsync -az --no-perms --info=progress2 --delete "$BACKUP_DIR/$1" rsync@10.0.10.2::backups/$REMOTE_DIR >> "$LOGFILE"
+    printf "%s\n\n" 'Done' >> "$LOGFILE"
 }
 
-sync timeshift
-sync backintime
+sync $1
