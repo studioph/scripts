@@ -1,0 +1,46 @@
+#!/usr/bin/python3
+
+import argparse
+import getpass
+import os
+from multiprocessing import Pool
+import subprocess
+from b2sdk.v2 import InMemoryAccountInfo
+from b2sdk.v2 import B2Api
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--input', type=str, nargs='+',
+                    help='List of folders to archive', required=True)
+parser.add_argument('--bucket', type=str,
+                    help='B2 bucket name to upload to', required=True)
+parser.add_argument('--folder', type=str,
+                    help='Remote folder path', required=True)
+args = parser.parse_args()
+
+key = getpass.getpass()
+b2_key_file = f'{os.getenv("HOME")}/.b2.key'
+with open(b2_key_file, 'r') as file:
+    data = file.read().rstrip('\n')
+
+info = InMemoryAccountInfo()
+b2_api = B2Api(info)
+application_key_id, application_key = data.split(':')
+b2_api.authorize_account('production', application_key_id, application_key)
+bucket = b2_api.get_bucket_by_name(args.bucket)
+
+
+def archive_upload(folder):
+    print(f'Processing {folder}...')
+    filename = f'{folder.replace(" ", "_")}.tar.xz.asc'
+    with open(f'/tmp/{filename}', 'w') as fout:
+        tar = subprocess.Popen(('tar', '-cvJf', '-', folder), stdout=subprocess.PIPE)
+        gpg = subprocess.Popen(('gpg', '-c', '--batch', '--passphrase', key), stdin=tar.stdout, stdout=fout)
+        if tar.wait() or gpg.wait():
+            print(f'Error processing {folder}')
+    bucket.upload_local_file(f'/tmp/{filename}', f'{args.folder}/{filename}')
+    os.remove(f'/tmp/{filename}')
+    print(f'Successfully processed {folder}')
+
+if __name__ == '__main__':
+    with Pool(len(args.input)) as p:
+        print(p.map(archive_upload, args.input))
