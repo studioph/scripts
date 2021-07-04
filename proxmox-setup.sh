@@ -37,8 +37,8 @@ function update(){
     echo "deb http://download.proxmox.com/debian/pve $CODENAME pve-no-subscription" >> /etc/apt/sources.list
     wget http://download.proxmox.com/debian/key.asc && apt-key add key.asc
     FOLDER=/etc/apt/sources.list.d
-    mv $FOLDER/pve-enterprise.list $FOLDER/pve-enterprise.list.bak
-
+    rm $FOLDER/pve-enterprise.list
+    
     # Upgrade packages
     apt update && apt upgrade -y
     apt install -y \
