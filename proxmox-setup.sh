@@ -37,8 +37,8 @@ function update(){
     echo "deb http://download.proxmox.com/debian/pve $CODENAME pve-no-subscription" >> /etc/apt/sources.list
     wget http://download.proxmox.com/debian/key.asc && apt-key add key.asc
     FOLDER=/etc/apt/sources.list.d
-    mv $FOLDER/pve-enterprise.list $FOLDER/pve-enterprise.list.bak
-
+    rm $FOLDER/pve-enterprise.list
+    
     # Upgrade packages
     apt update && apt upgrade -y
     apt install -y \
@@ -69,18 +69,14 @@ function addKernelParams(){
 }
 
 function setupIOMMU(){
-    for case $IOMMU in
-        intel)
+    if [[ $IOMMU == "intel" ]]; then
         addKernelParams intel_iommu=on
-        ;;
-        amd)
+    elif [[ $IOMMU == "amd" ]]; then
         addKernelParams amd_iommu=on
-        ;;
-        *)
+    else
         echo "Bad option to add kernel param: $1"
         exit -1
-        ;;
-    esac
+    fi
 
     printf "kvmgt\nvfio_mdev\nvfio_iommu_type1" >> /etc/modules
     update-initramfs -u -k all
