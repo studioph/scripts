@@ -100,6 +100,7 @@ sudo snap install flutter --classic
 sudo snap install dotnet-sdk --channel=lts/stable --classic
 sudo snap install google-cloud-sdk --classic
 sudo snap install pypy3 --classic
+sudo snap install yq
 
 # INSTALL FLATPAKS
 flatpak install -y \

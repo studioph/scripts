@@ -72,8 +72,9 @@ function setupDocker(){
 
 function packages(){
     sudo apt update && sudo apt upgrade -y
-    sudo apt install -y cockpit qemu-guest-agent python3-pip fail2ban jq nfs-common cifs-utils
+    sudo apt install -y cockpit qemu-guest-agent python3-pip fail2ban jq nfs-common cifs-utils npm
     sudo apt remove -y popularity-contest
+    npm install -g @bitwarden/cli
 }
 
 function setupGit(){

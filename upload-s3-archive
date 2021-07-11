@@ -50,6 +50,7 @@ def archive_upload(folder):
         ('gpg', '--armor', '--symmetric', '--output', f'/tmp/{filename}', '--batch', '--passphrase', encryption_key), stdin=tar.stdout)
     if tar.wait() or gpg.wait():
         print(f'Error compressing "{folder}"')
+        os.remove(f'/tmp/{filename}')
         return
 
     print(f'Uploading {filename}...')
