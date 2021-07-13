@@ -41,11 +41,11 @@ s3 = boto3.resource('s3', region_name=args.region,
 
 def archive_upload(folder):
     print(f'Compressing {folder}...')
-    filename = f'{folder.replace(" ", "_")}.tar.xz.asc'
+    filename = f'{folder.replace(" ", "_")}.tar.gz.asc'
     if args.path:
         os.chdir(args.path)
     tar = subprocess.Popen(
-        ('tar', '-cvJf', '-', folder), stdout=subprocess.PIPE)
+        ('tar', '-cvzf', '-', folder), stdout=subprocess.PIPE)
     gpg = subprocess.Popen(
         ('gpg', '--symmetric', '--output', f'/tmp/{filename}', '--batch', '--passphrase', encryption_key), stdin=tar.stdout)
     if tar.wait() or gpg.wait():
