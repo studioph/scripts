@@ -9,11 +9,6 @@ function parseArgs(){
             export DOCKER_USER="${i#*=}"
             shift # past argument=value
             ;;
-            --f2b-repo=*)
-            export FAIL2BAN_REPO="${i#*=}"
-            
-            shift # past argument=value
-            ;;
             --git-name=*)
             export GIT_NAME="${i#*=}"
             shift # past argument=value
@@ -22,16 +17,53 @@ function parseArgs(){
             export GIT_EMAIL="${i#*=}"
             shift # past argument=value
             ;;
+            --nvidia)
+            export NVIDIA=true
+            shift
+            ;;
             *)
-                # unknown option
+                echo "Unknown option: $i"
             ;;
         esac
     done
 
-    if [[ -z "$DOCKER_USER" || -z "$FAIL2BAN_REPO" || -z "$GIT_NAME" || -z "$GIT_EMAIL" ]]; then
-        echo "One or more required args missing: --docker-user, --f2b-repo, --git-name, --git-email"
+    if [[ -z "$DOCKER_USER" || -z "$GIT_NAME" || -z "$GIT_EMAIL" ]]; then
+        echo "One or more required args missing: --docker-user, --git-name, --git-email"
         exit 1
     fi
+}
+
+function setupGit(){
+    git config --global user.name "$GIT_NAME"
+    git config --global user.email "$GIT_EMAIL"
+    git config --global credential.helper store
+}
+
+function packages(){
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y cockpit qemu-guest-agent fail2ban jq nfs-common cifs-utils
+    sudo apt remove -y popularity-contest
+}
+
+# Configures a new systemd service to run on boot
+function addStartupScript(){
+    local SERVICE_NAME="$1"
+    local CMD="$2"
+    local DESC="$3"
+
+    echo "\
+    [Unit]
+    Description=$DESC
+
+    [Service]
+    ExecStart=/bin/sh -c $CMD
+
+    [Install]
+    WantedBy=multi-user.target
+    " | sudo tee "/etc/systemd/system/$SERVICE_NAME.service"
+
+    sudo systemctl start "$SERVICE_NAME"
+    sudo systemctl enable "$SERVICE_NAME"
 }
 
 function setupDocker(){
@@ -56,7 +88,7 @@ function setupDocker(){
 
     # change group on /var/run/docker.sock to be $DOCKER_USER instead of docker group to allow portainer to run
     sudo chown :$DOCKER_USER /var/run/docker.sock
-    echo @reboot chown :"$DOCKER_USER" /var/run/docker.sock | sudo crontab -
+    addStartupScript docker-sock "chown :$DOCKER_USER /var/run/docker.sock" "Enables portainer access to docker.sock"
     
     # install docker-compose
     curl -s https://api.github.com/repos/docker/compose/releases/latest | \
@@ -70,23 +102,11 @@ function setupDocker(){
     docker-compose version 
 }
 
-function packages(){
-    sudo apt update && sudo apt upgrade -y
-    sudo apt install -y cockpit qemu-guest-agent python3-pip fail2ban jq nfs-common cifs-utils npm
-    sudo apt remove -y popularity-contest
-    npm install -g @bitwarden/cli
-}
-
-function setupGit(){
-    git config --global user.name "$GIT_NAME"
-    git config --global user.email "$GIT_EMAIL"
-    git config --global credential.helper store
-}
-
-function fail2ban(){
-    F2B_DIR="/etc/fail2ban"
+function setupFail2ban(){
+    local F2B_DIR="/etc/fail2ban"
+    local F2B_REPO="https://gitlab.com/wuubb/fail2ban"
     cd "$HOME"
-    git clone "$FAIL2BAN_REPO"
+    git clone "$F2B_REPO"
     cd fail2ban
     sudo ln -s "$PWD/jail.local" "$F2B_DIR/jail.local"
     cd filter.d
@@ -96,18 +116,32 @@ function fail2ban(){
 }
 
 function initContainers(){
-    DOCKER_REPO="https://github.com/paulhutchings/docker-compose.git"
+    local DOCKER_REPO="https://github.com/paulhutchings/docker-compose.git"
     cd "$HOME"
     git clone "$DOCKER_REPO"
     cd docker-compose/portainer
     sudo docker-compose up -d
 }
 
+function setupNvidia(){
+    local NVIDIA_VERSION=460
+    sudo apt install -y \
+        "nvidia-headless-$NVIDIA_VERSION-server" \
+        "nvidia-utils-$NVIDIA_VERSION" \
+        "libnvidia-decode-$NVIDIA_VERSION" \
+        "libnvidia-encode-$NVIDIA_VERSION"
+    nvidia-smi
+}
+
 parseArgs "$@"
 packages
 setupDocker
 setupGit
-fail2ban
-initContainers
+setupFail2ban
+addStartupScript dev-dri "chmod -R 777 /dev/dri" "Changes permissions on /dev/dri"
 
-(sudo crontab -l; echo '@reboot chmod -R 777 /dev/dri') | sudo crontab -
+if [[ -v NVIDIA ]]; then
+    setupNvidia
+fi
+
+initContainers
