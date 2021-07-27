@@ -19,8 +19,8 @@ sudo apt-mark hold \
 	nvidia-compute-utils-465 \
 	nvidia-dkms-465 \
 	nvidia-driver-465 \
-	nvidia-driver-460 \ 
-	nvidia-kernel-common-465 \ 
+	nvidia-driver-460 \
+	nvidia-kernel-common-465 \
 	nvidia-kernel-source-465 \
 	nvidia-settings \
 	nvidia-utils-465 \
@@ -156,14 +156,14 @@ export PATH=$PATH:$HOME/.poetry/bin
 
 # INSTALL NVM & NODE
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
-cd $HOME
-source .bashrc
-nvm install --lts
-nvm use --lts
+bash --login -c "\
+nvm install --lts;
+nvm use --lts;
 npm install -g \
     firebase-tools \
-    @aws-amplify/cli
-    
+    @aws-amplify/cli;
+"
+
 # INSTALL RUST
 cd $HOME/Downloads
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > rustup-init.sh
@@ -211,7 +211,7 @@ timedatectl set-local-rtc 1 --adjust-system-clock
 #sudo make install
 
 # DISABLE USB WAKEUP
-sudo echo'
+echo'
 [Unit]
 Description=Disables USB mouse/keyboard wakeup
 
@@ -220,7 +220,7 @@ ExecStart=/bin/sh -c "echo XHC0 >> /proc/acpi/wakeup"
 
 [Install]
 WantedBy=multi-user.target
-' > /etc/systemd/system/disable-wakeup.service
+' | sudo tee /etc/systemd/system/disable-wakeup.service
 sudo systemctl start disable-wakeup
 sudo systemctl enable disable-wakeup
 
