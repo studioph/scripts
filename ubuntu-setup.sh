@@ -4,6 +4,10 @@
 
 for i in "$@"; do
     case $i in
+        --hostname=*)
+        export HOSTNAME="${i#*=}"
+        shift
+        ;;
         --ip1=*)
         export IP1="${i#*=}"
         shift
@@ -19,6 +23,7 @@ for i in "$@"; do
 done
 
 function configNetwork(){
+    sudo hostnamectl set-hostname "$HOSTNAME"
     sudo sed -i "s/10.0.1.99/$IP1/g" /etc/netplan/00-installer-config.yaml
     sudo sed -i "s/10.0.10.99/$IP10/g" /etc/netplan/00-installer-config.yaml
     sudo netplan apply
