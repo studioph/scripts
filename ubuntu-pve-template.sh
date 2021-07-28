@@ -41,6 +41,11 @@ function parseArgs(){
     fi
 }
 
+function setupSerialConsole(){
+    sudo sed -i 's/CMDLINE_LINUX_DEFAULT=""/CMDLINE_LINUX_DEFAULT="console=ttyS0,115200"/g' /etc/default/grub
+    sudo update-grub
+}
+
 function setupGit(){
     git config --global user.name "$GIT_NAME"
     git config --global user.email "$GIT_EMAIL"
@@ -129,9 +134,10 @@ function setupNvidia(){
 }
 
 parseArgs "$@"
+setupSerialConsole
+setupGit
 packages
 setupDocker
-setupGit
 addStartupScript dev-dri "chmod -R 777 /dev/dri" "Changes permissions on /dev/dri"
 
 if [[ -v NVIDIA ]]; then
