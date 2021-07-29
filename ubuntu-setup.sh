@@ -32,7 +32,7 @@ function configNetwork(){
 function formatDisk(){
     echo 'type=83' | sudo sfdisk /dev/sdb
     sudo mkfs -t ext4 /dev/sdb1
-    echo "scsi-0QEMU_QEMU_HARDDISK_drive-scsi1-part1 /var/lib/docker ext4 defaults 0 0" | sudo tee -a /etc/fstab
+    echo "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1-part1 /var/lib/docker auto defaults 0 0" | sudo tee -a /etc/fstab
     sudo mount /dev/sdb1 /var/lib/docker
     sudo systemctl restart docker
 }
