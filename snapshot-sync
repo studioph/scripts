@@ -19,7 +19,7 @@ else
 fi
 
 # Check if NAS exists on LAN
-ping -c 4 10.0.10.2 || (echo "Cannot connect to NAS" | tee -a "$LOGFILE" && exit 1)
+ping -c 4 10.truenas.studiop || (echo "Cannot connect to NAS" | tee -a "$LOGFILE" && exit 1)
 
 # Wait to sync if timeshift is running and creating a snapshot
 while pgrep timeshift; do
@@ -29,7 +29,7 @@ done
 
 function sync(){
     echo "Syncing $1 snapshots..." >> "$LOGFILE"
-    rsync -a --no-perms --info=progress2 --delete --password-file=/home/paul/.rsync.pwd "$BACKUP_DIR/$1" rsync@10.0.10.2::backups/$REMOTE_DIR |& tee -a "$LOGFILE"
+    rsync -a --no-perms --info=progress2 --delete --password-file=/home/paul/.rsync.pwd "$BACKUP_DIR/$1" rsync@10.truenas.studiop::backups/$REMOTE_DIR |& tee -a "$LOGFILE"
     printf "%s\n\n" 'Done' | tee -a "$LOGFILE"
 }
 
