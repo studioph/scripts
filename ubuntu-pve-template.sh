@@ -111,8 +111,9 @@ function setupDocker(){
         xargs sudo curl -L -o /usr/bin/docker-compose
     sudo chmod +x /usr/bin/docker-compose
 
-    # add user to docker and $DOCKER_USER groups
+    # Add users to nessecary groups
     sudo usermod -aG docker,$DOCKER_USER $USER
+    sudo usermod -aG render,video,cdrom $DOCKER_USER
     sudo docker info
     docker-compose version 
 }
@@ -131,6 +132,27 @@ function setupNvidia(){
     sudo apt install -y nvidia-docker2
     sudo systemctl restart docker
     nvidia-smi
+
+    # Keep NVIDIA drivers from being updated
+    sudo apt-mark hold \
+        "nvidia-headless-$NVIDIA_VERSION" \
+        "nvidia-utils-$NVIDIA_VERSION" \
+        "libnvidia-decode-$NVIDIA_VERSION" \
+        "libnvidia-encode-$NVIDIA_VERSION" \
+        "nvidia-kernel-source-$NVIDIA_VERSION" \
+        "nvidia-kernel-common-$NVIDIA_VERSION" \
+        "nvidia-compute-utils-$NVIDIA_VERSION" \
+        "nvidia-dkms-$NVIDIA_VERSION" \
+        "libnvidia-compute-$NVIDIA_VERSION" \
+        "libnvidia-cfg1-$NVIDIA_VERSION"
+}
+
+function formatDisk(){
+    echo 'type=83' | sudo sfdisk /dev/sdb
+    sudo mkfs -t ext4 /dev/sdb1
+    echo "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1-part1 /var/lib/docker auto defaults 0 0" | sudo tee -a /etc/fstab
+    sudo mount /dev/sdb1 /var/lib/docker
+    sudo systemctl restart docker
 }
 
 parseArgs "$@"
@@ -138,6 +160,7 @@ setupSerialConsole
 setupGit
 packages
 setupDocker
+formatDisk
 addStartupScript dev-dri "chmod -R 777 /dev/dri" "Changes permissions on /dev/dri"
 
 if [[ -v NVIDIA ]]; then

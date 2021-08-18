@@ -29,14 +29,6 @@ function configNetwork(){
     sudo netplan apply
 }
 
-function formatDisk(){
-    echo 'type=83' | sudo sfdisk /dev/sdb
-    sudo mkfs -t ext4 /dev/sdb1
-    echo "/dev/disk/by-id/scsi-0QEMU_QEMU_HARDDISK_drive-scsi1-part1 /var/lib/docker auto defaults 0 0" | sudo tee -a /etc/fstab
-    sudo mount /dev/sdb1 /var/lib/docker
-    sudo systemctl restart docker
-}
-
 function setupFail2ban(){
     local F2B_DIR="/etc/fail2ban"
     local F2B_REPO="https://gitlab.com/wuubb/fail2ban"
